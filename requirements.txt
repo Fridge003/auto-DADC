@@ -1,0 +1,14 @@
+numpy
+pandas
+scikit-learn
+rouge_score
+fire
+openai
+backoff
+transformers>=4.26.1
+evaluate
+torch
+sentencepiece
+tokenizers==0.12.1
+wandb
+tensorboard
