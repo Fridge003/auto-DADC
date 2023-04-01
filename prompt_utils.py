@@ -55,7 +55,6 @@ def parse_response(response: str) -> Sequence[dict]:
         label = label.strip(" .")
         i += 3   
         if label not in label_dict.keys():
-            print(f"{label} not pass")
             continue
         collected_examples.append({"premise": premise, 
                                    "hypothesis": hypothesis,
@@ -69,7 +68,6 @@ def validate_example(example: dict, scorer: rouge_scorer.RougeScorer,
     
     premise, hypothesis = example["premise"], example["hypothesis"]
     if (len(premise) == 0 or len(hypothesis) == 0):
-        print("Length false")
         return False
 
     
@@ -84,7 +82,6 @@ def validate_example(example: dict, scorer: rouge_scorer.RougeScorer,
         rouge_scores = [score.fmeasure for score in rouge_scores]
 
         if max(rouge_scores) > 0.7: # There exists some simliar examples
-            print("similarity false")
             return False
     
     

@@ -26,8 +26,6 @@ class NLIDataset(Dataset):
         
         # collect labels
         self.labels = list(df['label'])
-        print(len(self.labels))
-        print(len(self.tokenized_examples['input_ids'][0]))
         logging.warning(f"Finish processing dataset from {data_path}")
 
     def __len__(self):

@@ -43,7 +43,6 @@ def predict():
         batch_pred = classifier(input_sentences)
         predicted_labels = np.array([int(label2id[example['label']]) for example in batch_pred])
         gold_labels = labels[batch_start: batch_end]
-        # print(predicted_labels, gold_labels)
         correct_count += (predicted_labels == gold_labels).sum()
 
 
