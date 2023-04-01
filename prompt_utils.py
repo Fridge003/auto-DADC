@@ -37,7 +37,8 @@ def parse_response(response: str) -> Sequence[dict]:
     while i < len(split_sentences):
 
         # Searching for the next example
-        if split_sentences[i].find('Premise') == -1:
+        if (split_sentences[i].find('Premise') == -1) and \
+            (split_sentences[i].find('premise') == -1):
             i += 1
             continue
 
@@ -51,8 +52,10 @@ def parse_response(response: str) -> Sequence[dict]:
         premise = split_sentences[i][split_sentences[i].find(':')+1:]
         hypothesis = split_sentences[i+1][split_sentences[i+1].find(':')+1:]
         label = split_sentences[i+2][split_sentences[i+2].find(':')+1:]
+        label = label.strip(" .")
         i += 3   
         if label not in label_dict.keys():
+            print(f"{label} not pass")
             continue
         collected_examples.append({"premise": premise, 
                                    "hypothesis": hypothesis,
@@ -66,8 +69,10 @@ def validate_example(example: dict, scorer: rouge_scorer.RougeScorer,
     
     premise, hypothesis = example["premise"], example["hypothesis"]
     if (len(premise) == 0 or len(hypothesis) == 0):
+        print("Length false")
         return False
 
+    
     # computing similarity with the pre-tokenzied examples
     if (len(all_example_tokens) > 0):
         new_instruction_token = scorer._tokenizer.tokenize(premise + hypothesis)
@@ -79,6 +84,7 @@ def validate_example(example: dict, scorer: rouge_scorer.RougeScorer,
         rouge_scores = [score.fmeasure for score in rouge_scores]
 
         if max(rouge_scores) > 0.7: # There exists some simliar examples
+            print("similarity false")
             return False
     
     

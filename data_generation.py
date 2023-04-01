@@ -22,10 +22,12 @@ def generate_prompt(examples, num_genetated_examples, label):
                   "If the answer is false, label should be \'Contradiction\'; If the answer is undetermined, label should be \'Neutral\'."
     
     instruction += f"Now you are going to generate {num_prompt_examples + num_genetated_examples} example of NLI task with {label} as its label." \
-                  "Please generate in the following way:\n"
+                    "Each example should contain three lines, with the first line being a sentence as 'Premise', " \
+                    "the second line being a sentence as 'Hypothesis', and the last line being a sentence as 'Label'." 
 
     prompt = str(instruction)
     str_labels = ['Entailment', 'Neutral', 'Contradiction']
+
     for i, example in enumerate(examples):
         prompt += f"{i+1}.\n" \
                   f"Premise:{example['premise']}\n" \
@@ -102,7 +104,6 @@ def generate_data_by_prompting(
         # print("Response:\n" + response + "\n")
 
         collected_examples = parse_response(response)
-
         # Only keep validated examples (those have valid premise/hypothesis/label, and not similar to any preceded examples)
         for example in collected_examples:
 
