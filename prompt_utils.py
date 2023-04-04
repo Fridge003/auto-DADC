@@ -83,8 +83,7 @@ def validate_example(example: dict, scorer: rouge_scorer.RougeScorer,
 
         if max(rouge_scores) > 0.7: # There exists some simliar examples
             return False
-    
-    
+        
     return True
 
 

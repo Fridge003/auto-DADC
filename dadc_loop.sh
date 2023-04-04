@@ -9,8 +9,8 @@
 openai_api_key=REPLACE_YOUR_KEY_HERE
 
 # Visible Cuda Devices/number of visible cuda devices during fine-tuning. 
-cuda_visible_devices="0,1,2,3"
-num_cuda_devices=4
+cuda_visible_devices="0,1"
+num_cuda_devices=2
 
 # Total number of loops for DADC.
 total_loop=10
@@ -19,12 +19,12 @@ total_loop=10
 # 1. All the collected data through prompting GPT
 # 2. All the models fine-tuned at each cycle.
 # 3. The performance on a certain test dataset for the fine-tuned model at each loop.
-working_dir="./dadc_result"
+working_dir="../../data/dadc_results/critique_correctness"
 
 # A model name or path of a HuggingFace model, as the starting model of dadc loop.
 # This model can be a pretrained model provided by HuggingFace,
 # or a model fine-tuned on NLI datasets such as SNLI or MNLI.
-base_model="../../data/DADC/finetuned-roberta-large"
+base_model="../../data/dadc_results/finetuned-roberta-large"
 
 # A path to dataset(a .csv file) for testing model performance.
 test_data_path="./datasets/NLI_diagnostic.csv"
