@@ -3,38 +3,10 @@ import random
 import pandas as pd
 from prompt_utils import load_csv_file_as_list, save_list_as_csv_files
 from prompt_utils import completions_with_backoff, parse_response, validate_example
-
+from prompt_utils import generation_prompt
 import tqdm
 from rouge_score import rouge_scorer
 import fire
-
-#TODO: similartity check using Rouge_Score; pick seed examples with low confidence
-
-def generate_prompt(examples, num_genetated_examples, label):
-    """
-    :param examples: A list of (premise, hypothesis, label) tuples
-    :return: prompt: A string as prompt
-    """
-    num_prompt_examples = len(examples)
-    instruction = "In an NLI task, you are given two sentences. The first sentence is called \'Premise\', while" \
-                  " the second sentence is called \'Hypothesis\'. The label determines whether “Hypothesis” is " \
-                  " true, false, or undetermined under the condition of “premise”. If the answer is true, label should be \'Entailment\';" \
-                  "If the answer is false, label should be \'Contradiction\'; If the answer is undetermined, label should be \'Neutral\'."
-    
-    instruction += f"Now you are going to generate {num_prompt_examples + num_genetated_examples} example of NLI task with {label} as its label." \
-                    "Each example should contain three lines, with the first line being a sentence as 'Premise', " \
-                    "the second line being a sentence as 'Hypothesis', and the last line being a sentence as 'Label'." 
-
-    prompt = str(instruction)
-    str_labels = ['Entailment', 'Neutral', 'Contradiction']
-
-    for i, example in enumerate(examples):
-        prompt += f"{i+1}.\n" \
-                  f"Premise:{example['premise']}\n" \
-                  f"Hypothesis:{example['hypothesis']}\n" \
-                  f"Label:{str_labels[example['label']]}\n"
-    return prompt
-
 
 
 def generate_data_by_prompting( 
@@ -54,15 +26,20 @@ def generate_data_by_prompting(
     # get api key from environment variable
     api_key = os.getenv("OPENAI_API_KEY")
 
+    # arguments for prompting
+    prompt_args = {"api_key":api_key, "model":model_name, "messages":[], 
+                   "top_p":top_p, "temperature":temperature, "max_tokens":max_tokens}
+
     os.makedirs(output_dir, exist_ok=True)
     output_path_train = os.path.join(output_dir, "gen_train.csv") # Generated Training Set
     output_path_eval = os.path.join(output_dir, "gen_validation.csv") # Generated Validation Set
+    output_path_disagreed = os.path.join(output_dir, "gen_disagreed.csv")
 
     seed_examples = load_csv_file_as_list(seed_dataset_path)
     print(f"Loaded {len(seed_examples)} seed examples")
     
     # Divide seed examples according to label
-    labels = ['Entailment', 'Neutral', 'Contradiction']
+    labels = ["Entailment", "Neutral", "Contradiction"]
     divided_seed_examples = {label:[] for label in labels}
     for example in seed_examples:
         # Here example['label'] is an integer in [0, 1, 2]
@@ -81,34 +58,45 @@ def generate_data_by_prompting(
     all_example_tokens += [scorer._tokenizer.tokenize(example["premise"] + example["hypothesis"]) for example in generated_eval_data]
 
 
-    # How many examples have been newly generated
-    new_examples = []
+    new_examples = []  # Newly generated valid examples
+    disagreed_examples = [] # Examples that doesn't reach argreement between generator and discriminator
+    label_cnts = {label: 0 for label in labels}
 
-    # The counting of requests to openai
     request_idx = 0
 
     progress_bar = tqdm.tqdm(total=num_examples_to_generate, desc="Collected Examples")
 
     while len(new_examples) < num_examples_to_generate:
 
-        # only sampling from the seed examples
-        # to achieve uniform distribution among three labels, pick label[request_idx % 3] at each prompt
-        picked_label = labels[request_idx % 3]
+        # to achieve uniform distribution among three labels, pick the label with smallest number of examples at each prompt
+        picked_label = "Entailment"
+
+        if (label_cnts["Neutral"] <= label_cnts["Entailment"]) and \
+            (label_cnts["Neutral"] <= label_cnts["Contradiction"]):
+            picked_label = "Neutral"
+
+        if (label_cnts["Contradiction"] <= label_cnts["Entailment"]) and \
+            (label_cnts["Contradiction"] <= label_cnts["Neutral"]):
+            picked_label = "Contradiction"
+        
+        # only sampling from the seed examples with given label
         prompt_examples = random.sample(divided_seed_examples[picked_label],
                                             num_prompt_examples)
-        prompt = generate_prompt(prompt_examples, num_genetated_examples_per_prompt, label=picked_label)
+        prompt = generation_prompt(prompt_examples, num_genetated_examples_per_prompt, label=picked_label)
         # print("Prompt:\n" + prompt + "\n")
-    
-        messages = [{"role":"user", "content": prompt}]
-        response = completions_with_backoff(api_key=api_key, model=model_name, messages=messages, top_p=top_p, temperature=temperature, max_tokens=max_tokens)
+        
+        prompt_args["temperature"] = 1.0
+        prompt_args["messages"] = [{"role":"user", "content": prompt}]
+        response = completions_with_backoff(**prompt_args)
         # print("Response:\n" + response + "\n")
 
         collected_examples = parse_response(response)
         # Only keep validated examples (those have valid premise/hypothesis/label, and not similar to any preceded examples)
         for example in collected_examples:
-
-            if validate_example(example, scorer, all_example_tokens, num_cpus):
+            
+            if validate_example(example, scorer, all_example_tokens, prompt_args, disagreed_examples, num_cpus):
                 new_examples += [example]
+                label_cnts[picked_label] += 1
                 all_example_tokens.append(scorer._tokenizer.tokenize(example["premise"] + example["hypothesis"]))
                 progress_bar.update(1)
 
@@ -122,6 +110,7 @@ def generate_data_by_prompting(
     #  Write back collected examples
     save_list_as_csv_files(output_path_train, generated_train_data)
     save_list_as_csv_files(output_path_eval, generated_eval_data)
+    save_list_as_csv_files(output_path_disagreed, disagreed_examples)
     print(f"Saving {len(generated_train_data)} examples to training set {output_path_train}")
     print(f"Saving {len(generated_eval_data)} examples to validation set {output_path_eval}")
     

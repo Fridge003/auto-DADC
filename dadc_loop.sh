@@ -9,8 +9,12 @@
 openai_api_key=REPLACE_YOUR_KEY_HERE
 
 # Visible Cuda Devices/number of visible cuda devices during fine-tuning. 
-cuda_visible_devices="0,1"
-num_cuda_devices=2
+cuda_visible_devices="0,1,2,3"
+num_cuda_devices=4
+
+# An integer indicating device for making prediction on test set.
+# If using cpu, set it to -1, else set it to the id of gpu for using.
+test_device=0
 
 # Total number of loops for DADC.
 total_loop=10
@@ -19,22 +23,18 @@ total_loop=10
 # 1. All the collected data through prompting GPT
 # 2. All the models fine-tuned at each cycle.
 # 3. The performance on a certain test dataset for the fine-tuned model at each loop.
-working_dir="../../data/dadc_results/critique_correctness"
+working_dir=WORKING_DIR
 
 # A model name or path of a HuggingFace model, as the starting model of dadc loop.
 # This model can be a pretrained model provided by HuggingFace,
 # or a model fine-tuned on NLI datasets such as SNLI or MNLI.
-base_model="../../data/dadc_results/finetuned-roberta-large"
+base_model=BASE_MODEL
 
 # A path to dataset(a .csv file) for testing model performance.
-test_data_path="./datasets/NLI_diagnostic.csv"
-
-# An integer indicating device for making prediction on test set.
-# If using cpu, set it to -1, else set it to the id of gpu for using.
-test_device=0
+test_data_path=TEST_DATA_PATH
 
 # A path to seed dataset(a .csv file) for generating new examples.
-seed_data_path="./datasets/snli_validation.csv"
+seed_data_path=SEED_DATA_PATH
 
 # Number of examples for generation at each loop.
 num_examples_generated_per_loop=600
@@ -114,8 +114,9 @@ CUDA_VISIBLE_DEVICES=$cuda_visible_devices torchrun \
     --logging_steps 1 \
     --load_best_model_at_end True \
     --fsdp "full_shard auto_wrap" \
-    --metric_for_best_model "accuracy" \
-    --early_stopping_patience $early_stopping_patience
+    --early_stopping_patience $early_stopping_patience \
+    --metric_for_best_model "accuracy"
+
 
 # Test performance on newly-finetuned model.
 python predict.py \

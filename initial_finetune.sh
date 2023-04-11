@@ -23,6 +23,6 @@ CUDA_VISIBLE_DEVICES="0,1,2,3" torchrun \
     --logging_steps 1 \
     --load_best_model_at_end True \
     --fsdp "full_shard auto_wrap" \
-    --metric_for_best_model "accuracy" \
-    --early_stopping_patience 3
+    --early_stopping_patience 3 \
+    --metric_for_best_model "accuracy"
     
