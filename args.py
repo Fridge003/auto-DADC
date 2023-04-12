@@ -6,6 +6,7 @@ import transformers
 @dataclass
 class ModelArguments:
     model_name_or_path: Optional[str] = field(default="roberta-large")
+    num_labels: int = field(default=3)
 
 @dataclass
 class DataArguments:

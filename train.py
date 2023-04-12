@@ -12,12 +12,19 @@ def train():
     parser = transformers.HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
-    id2label = {"0": "Entailment", "1": "Neutral", "2": "Contradiction"}
-    label2id = {"Entailment": "0", "Neutral": "1", "Contradiction": "2"}
+    if model_args.num_labels == 3:
+        id2label = {"0": "Entailment", "1": "Neutral", "2": "Contradiction"}
+        label2id = {"Entailment": "0", "Neutral": "1", "Contradiction": "2"}
+    elif model_args.num_labels == 2:
+        id2label = {"0": "Entailment", "1": "Contradiction"}
+        label2id = {"Entailment": "0", "Contradiction": "1"}
+    else:
+        raise ValueError("Number of labels for NLI task can only be 3 or 2")
+        
     model = transformers.AutoModelForSequenceClassification.from_pretrained(
         model_args.model_name_or_path,
         cache_dir=training_args.cache_dir,
-        num_labels=3,
+        num_labels=model_args.num_labels,
         id2label=id2label,
         label2id=label2id
     )
@@ -30,7 +37,9 @@ def train():
         use_fast=False,
     )
 
-    training_data_module = prepare_data_module(tokenizer=tokenizer, data_args=data_args)
+    training_data_module = prepare_data_module(tokenizer=tokenizer, 
+                                               num_labels=model_args.num_labels,
+                                               data_args=data_args)
 
     trainer = Trainer(model=model, 
                     tokenizer=tokenizer, 

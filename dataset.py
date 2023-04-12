@@ -10,7 +10,7 @@ import evaluate
 class NLIDataset(Dataset):
     """Create an NLI Dataset for training."""
 
-    def __init__(self, data_path: str, tokenizer: transformers.PreTrainedTokenizer):
+    def __init__(self, tokenizer: transformers.PreTrainedTokenizer, data_path: str, num_labels: int):
         super(NLIDataset, self).__init__()
         
         logging.warning(f"Processing dataset from {data_path}")
@@ -24,8 +24,11 @@ class NLIDataset(Dataset):
                                             max_length=tokenizer.model_max_length,
                                             truncation=True)
         
-        # collect labels
+        # collect labels, changing to binary label if task is binary
         self.labels = list(df['label'])
+        if num_labels == 2:
+            self.labels = [0 if x == 0 else 1 for x in self.labels]
+
         logging.warning(f"Finish processing dataset from {data_path}")
 
     def __len__(self):
@@ -40,7 +43,7 @@ class NLIDataset(Dataset):
 class NLIDatasetForPrediction(Dataset):
     """Create an NLI Dataset for predicting."""
 
-    def __init__(self, data_path: str):
+    def __init__(self, data_path: str, num_labels: int):
         super(NLIDatasetForPrediction, self).__init__()
 
         logging.info(f"Processing testing dataset from {data_path}")
@@ -50,8 +53,11 @@ class NLIDatasetForPrediction(Dataset):
         # Concatenate "premise" and "hypothesis" string for examples
         self.input_sentences = [df.loc[id, "premise"] + df.loc[id, "hypothesis"] for id in range(len(df))]
         
-        # collect labels
+        # collect labels, changing to binary label if task is binary
         self.labels = list(df["label"])
+        if num_labels == 2:
+            self.labels = [0 if x == 0 else 1 for x in self.labels]
+
 
         logging.info(f"Finish processing testing dataset from {data_path}")
 
@@ -73,9 +79,8 @@ def compute_metrics(eval_pred):
     return accuracy.compute(predictions=predictions, references=labels)
 
 
-def prepare_data_module(tokenizer: transformers.PreTrainedTokenizer, data_args) -> Dict:
+def prepare_data_module(tokenizer: transformers.PreTrainedTokenizer, num_labels: int, data_args) -> Dict:
     """Prepare the training/evalutation datasets for finetuning"""
-    train_dataset = NLIDataset(tokenizer=tokenizer, data_path=data_args.train_data_path)
-    eval_dataset = NLIDataset(tokenizer=tokenizer, data_path=data_args.eval_data_path)
+    train_dataset = NLIDataset(tokenizer=tokenizer, data_path=data_args.train_data_path, num_labels=num_labels)
+    eval_dataset = NLIDataset(tokenizer=tokenizer, data_path=data_args.eval_data_path, num_labels=num_labels)
     return dict(train_dataset=train_dataset, eval_dataset=eval_dataset, compute_metrics=compute_metrics)
-

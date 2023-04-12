@@ -96,6 +96,7 @@ python -m data_generation generate_data_by_prompting \
 CUDA_VISIBLE_DEVICES=$cuda_visible_devices torchrun \
     --nnodes=1 --nproc_per_node=$num_cuda_devices --master_port=1234 train.py \
     --model_name_or_path $last_model_path \
+    --num_labels 3 \
     --train_data_path $generated_train_data \
     --eval_data_path $generated_eval_data \
     --test_data_path $test_data_path \

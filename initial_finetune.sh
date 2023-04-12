@@ -5,6 +5,7 @@ set -xe
 CUDA_VISIBLE_DEVICES="0,1,2,3" torchrun \
     --nnodes 1 --nproc_per_node=4 --master_port=1234 train.py \
     --model_name_or_path roberta-large \
+    --num_labels 3 \
     --train_data_path ./datasets/snli_train.csv \
     --eval_data_path datasets/snli_validation.csv \
     --test_data_path ./datasets/NLI_diagnostic.csv \
@@ -25,4 +26,3 @@ CUDA_VISIBLE_DEVICES="0,1,2,3" torchrun \
     --fsdp "full_shard auto_wrap" \
     --early_stopping_patience 3 \
     --metric_for_best_model "accuracy"
-    
