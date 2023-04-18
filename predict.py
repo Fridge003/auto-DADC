@@ -16,7 +16,7 @@ def predict():
 
     model = transformers.AutoModelForSequenceClassification.from_pretrained(
         model_args.model_name_or_path,
-        num_labels=3
+        num_labels=model_args.num_labels
     )
 
     tokenizer = transformers.AutoTokenizer.from_pretrained(
@@ -26,7 +26,7 @@ def predict():
     )
 
     label2id = model.config.label2id
-    dataset_pred = NLIDatasetForPrediction(data_path=predict_args.test_data_path)
+    dataset_pred = NLIDatasetForPrediction(data_path=predict_args.test_data_path, num_labels=model_args.num_labels)
 
     # Use Transformers pipeline to do prediction on test dataset
     classifier = TextClassificationPipeline(model=model, tokenizer=tokenizer, device=predict_args.device)

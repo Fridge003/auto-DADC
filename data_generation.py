@@ -10,7 +10,8 @@ import fire
 
 
 def generate_data_by_prompting( 
-    output_dir="./collected_data",
+    input_dir=".",
+    output_dir=".",
     seed_dataset_path="./datasets/snli_validation.csv",
     num_examples_to_generate=1000,
     validation_ratio=0.05,
@@ -47,10 +48,11 @@ def generate_data_by_prompting(
 
     # Load the prior LM-generated examples, including a training set and a validation set
     generated_train_data, generated_eval_data = [], []
-    generated_train_data += load_csv_file_as_list(output_path_train)
-    generated_eval_data += load_csv_file_as_list(output_path_eval)
-    print(f"Loaded {len(generated_train_data)} examples from generated training set {output_path_train}")
-    print(f"Loaded {len(generated_eval_data)} examples from generated validation set {output_path_eval}")
+    if input_dir != "Init":
+        generated_train_data += load_csv_file_as_list(os.path.join(input_dir, "gen_train.csv"))
+        generated_eval_data += load_csv_file_as_list(os.path.join(input_dir, "gen_validation.csv"))
+    print(f"Loaded {len(generated_train_data)} examples.")
+    print(f"Loaded {len(generated_eval_data)} examples.")
     
     # rouge for computing similarity
     scorer = rouge_scorer.RougeScorer(["rougeL"], use_stemmer=False)
