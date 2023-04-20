@@ -134,7 +134,7 @@ do
         --per_device_eval_batch_size $per_device_eval_batch_size \
         --evaluation_strategy "epoch" \
         --save_strategy "epoch" \
-        --save_total_limit 0 \
+        --save_total_limit 1 \
         --gradient_accumulation_steps 4 \
         --learning_rate 2e-5 \
         --lr_scheduler_type "linear" \
