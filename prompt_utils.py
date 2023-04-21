@@ -165,8 +165,7 @@ def parse_response(response: str, prompt_mode="default") -> Sequence[dict]:
         while i < len(split_sentences):
 
             # Searching for the next example
-            if (split_sentences[i].find('Hypothesis') == -1) and \
-                (split_sentences[i].find('hypothesis') == -1):
+            if (split_sentences[i].find('Hypothesis') == -1):
                 i += 1
                 continue
 
