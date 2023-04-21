@@ -40,6 +40,9 @@ test_data_path=TEST_DATA_PATH
 # A path to seed dataset(a .csv file) for generating new examples.
 seed_data_path=SEED_DATA_PATH
 
+# Mode for prompting
+prompt_mode="default"
+
 # Number of examples for generation at each loop.
 num_examples_generated_per_loop=600
 
@@ -112,6 +115,7 @@ do
         --input_dir $last_data_path \
         --output_dir $next_data_path \
         --seed_dataset_path  $seed_data_path \
+        --prompt_mode $prompt_mode \
         --num_examples_to_generate $num_examples_generated_per_loop \
         --validation_ratio 0.1 \
         --model_name gpt-3.5-turbo \

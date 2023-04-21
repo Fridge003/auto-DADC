@@ -13,6 +13,7 @@ def generate_data_by_prompting(
     input_dir=".",
     output_dir=".",
     seed_dataset_path="./datasets/snli_validation.csv",
+    prompt_mode="default",
     num_examples_to_generate=1000,
     validation_ratio=0.05,
     model_name="gpt-3.5-turbo",
@@ -22,7 +23,10 @@ def generate_data_by_prompting(
     top_p=1.0,
     max_tokens=512,
     num_cpus=8
-):
+):  
+    
+    # Check validity of prompt mode
+    assert prompt_mode in ["default", "passage"]
 
     # get api key from environment variable
     api_key = os.getenv("OPENAI_API_KEY")
@@ -41,6 +45,7 @@ def generate_data_by_prompting(
     
     # Divide seed examples according to label
     labels = ["Entailment", "Neutral", "Contradiction"]
+    label2id = {'Entailment': 0, 'Neutral': 1, 'Contradiction': 2}
     divided_seed_examples = {label:[] for label in labels}
     for example in seed_examples:
         # Here example['label'] is an integer in [0, 1, 2]
@@ -56,8 +61,13 @@ def generate_data_by_prompting(
     
     # rouge for computing similarity
     scorer = rouge_scorer.RougeScorer(["rougeL"], use_stemmer=False)
-    all_example_tokens = [scorer._tokenizer.tokenize(example["premise"] + example["hypothesis"]) for example in generated_train_data] 
-    all_example_tokens += [scorer._tokenizer.tokenize(example["premise"] + example["hypothesis"]) for example in generated_eval_data]
+    all_example_tokens = []
+    if prompt_mode == "passage":
+        all_example_tokens = [scorer._tokenizer.tokenize(example["hypothesis"]) for example in generated_train_data] 
+        all_example_tokens += [scorer._tokenizer.tokenize(example["hypothesis"]) for example in generated_eval_data]
+    else:
+        all_example_tokens = [scorer._tokenizer.tokenize(example["premise"] + example["hypothesis"]) for example in generated_train_data] 
+        all_example_tokens += [scorer._tokenizer.tokenize(example["premise"] + example["hypothesis"]) for example in generated_eval_data]
 
 
     new_examples = []  # Newly generated valid examples
@@ -84,7 +94,7 @@ def generate_data_by_prompting(
         # only sampling from the seed examples with given label
         prompt_examples = random.sample(divided_seed_examples[picked_label],
                                             num_prompt_examples)
-        prompt = generation_prompt(prompt_examples, num_genetated_examples_per_prompt, label=picked_label)
+        prompt = generation_prompt(prompt_examples, num_genetated_examples_per_prompt, label=picked_label, prompt_mode=prompt_mode)
         # print("Prompt:\n" + prompt + "\n")
         
         prompt_args["temperature"] = 1.0
@@ -92,14 +102,23 @@ def generate_data_by_prompting(
         response = completions_with_backoff(**prompt_args)
         # print("Response:\n" + response + "\n")
 
-        collected_examples = parse_response(response)
+        collected_examples = parse_response(response, prompt_mode=prompt_mode)
+
+        # Adding premise & label under "passage" prompting mode
+        if prompt_mode == "passage":
+            premise_passage = prompt_examples[0]['premise']
+            for i in range(len(collected_examples)):
+                collected_examples[i]['premise'] = premise_passage
+                collected_examples[i]['label'] = label2id[picked_label]
+
         # Only keep validated examples (those have valid premise/hypothesis/label, and not similar to any preceded examples)
         for example in collected_examples:
             
-            if validate_example(example, scorer, all_example_tokens, prompt_args, disagreed_examples, num_cpus):
+            if validate_example(example, scorer, all_example_tokens, prompt_args, disagreed_examples, num_cpus, prompt_mode=prompt_mode):
                 new_examples += [example]
                 label_cnts[picked_label] += 1
-                all_example_tokens.append(scorer._tokenizer.tokenize(example["premise"] + example["hypothesis"]))
+                similarity_detector = example["hypothesis"] if prompt_mode == "passage" else (example["premise"] + example["hypothesis"])
+                all_example_tokens.append(scorer._tokenizer.tokenize(similarity_detector))
                 progress_bar.update(1)
 
         request_idx += 1
